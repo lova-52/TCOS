@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iOS Virtual Phone</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+               "SF Pro Text", Inter, Arial, sans-serif;
+  background: #111;
+}
+
+button {
+  font-family: inherit;
+}
+
+.phone {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: 390 / 844;
+  margin: auto;
+  overflow: hidden;
+  background: #000;
+  border-radius: 48px;
+  box-shadow:
+    0 0 0 3px #222,
+    0 30px 80px rgba(0,0,0,.55);
+  color: white;
+}
+
+/* =========================
+   WALLPAPER
+========================= */
+
+.wallpaper,
+.home-bg {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,.05),
+      rgba(0,0,0,.18)
+    ),
+    url("my.png")
+    center / cover no-repeat;
+}
+
+.wallpaper {
+  transform: scale(1.02);
+}
+
+/* =========================
+   DYNAMIC ISLAND
+========================= */
+
+.dynamic-island {
+  position: absolute;
+  z-index: 100;
+
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 125px;
+  height: 36px;
+
+  background: #000;
+  border-radius: 25px;
+}
+
+/* =========================
+   STATUS BAR
+========================= */
+
+.status-bar {
+  position: absolute;
+  z-index: 90;
+
+  top: 17px;
+  left: 28px;
+  right: 28px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  pointer-events: none;
+}
+
+.status-icons {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.signal {
+  width: 16px;
+  height: 12px;
+
+  background:
+    linear-gradient(
+      to top,
+      white 20%,
+      transparent 20%
+    );
+
+  clip-path: polygon(
+    0 100%, 0 75%,
+    25% 75%, 25% 50%,
+    50% 50%, 50% 25%,
+    75% 25%, 75% 0,
+    100% 0, 100% 100%
+  );
+}
+
+.wifi {
+  font-size: 14px;
+}
+
+.battery {
+  width: 23px;
+  height: 11px;
+
+  border: 1.5px solid white;
+  border-radius: 3px;
+
+  position: relative;
+}
+
+.battery::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: 3px;
+  width: 2px;
+  height: 4px;
+  background: white;
+  border-radius: 1px;
+}
+
+.battery::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 15px;
+  height: 5px;
+  background: white;
+  border-radius: 1px;
+}
+
+/* =========================
+   LOCK SCREEN
+========================= */
+
+.lock-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding-top: 105px;
+
+  transition:
+    opacity .35s ease,
+    transform .4s ease;
+}
+
+.lock-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1.04);
+}
+
+.date {
+  font-size: 20px;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+
+.clock {
+  margin-top: 2px;
+  font-size: 74px;
+  line-height: 1;
+  font-weight: 300;
+  letter-spacing: -4px;
+  text-shadow: 0 3px 15px rgba(0,0,0,.3);
+}
+
+.lock-icon {
+  margin-top: 42px;
+  font-size: 22px;
+}
+
+.password-title {
+  margin-top: 12px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.dots {
+  display: flex;
+  gap: 13px;
+  margin-top: 17px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid white;
+  transition: background .15s, transform .15s;
+}
+
+.dot.active {
+  background: white;
+  transform: scale(1.05);
+}
+
+.error {
+  height: 22px;
+  margin-top: 9px;
+  font-size: 14px;
+  color: #ffb4b4;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.error.show {
+  opacity: 1;
+}
+
+/* =========================
+   KEYPAD
+========================= */
+
+.keypad {
+  position: absolute;
+  left: 50%;
+  bottom: 83px;
+  transform: translateX(-50%);
+
+  width: 245px;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 13px;
+}
+
+.key {
+  width: 70px;
+  height: 70px;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: rgba(255,255,255,.22);
+  color: white;
+
+  font-size: 30px;
+  font-weight: 400;
+
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+
+  transition:
+    background .12s,
+    transform .08s;
+}
+
+.key:active {
+  background: rgba(255,255,255,.4);
+  transform: scale(.94);
+}
+
+.key small {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 1px;
+  margin-top: -3px;
+}
+
+/* =========================
+   LOCK ACTIONS
+========================= */
+
+.lock-actions {
+  position: absolute;
+  bottom: 27px;
+  left: 30px;
+  right: 30px;
+
+  display: flex;
+  justify-content: space-between;
+}
+
+.action {
+  width: 45px;
+  height: 45px;
+
+  border: none;
+  border-radius: 50%;
+
+  color: white;
+  background: rgba(0,0,0,.25);
+
+  backdrop-filter: blur(8px);
+
+  font-size: 20px;
+}
+
+/* =========================
+   HOME SCREEN
+========================= */
+
+.home-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity .4s ease;
+}
+
+.home-screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.home-bg {
+  z-index: 0;
+}
+
+/* =========================
+   APP GRID
+========================= */
+
+.apps {
+  position: absolute;
+  z-index: 2;
+
+  top: 105px;
+  left: 25px;
+  right: 25px;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 23px 15px;
+}
+
+.app {
+  text-align: center;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.app-icon {
+  width: 62px;
+  height: 62px;
+
+  margin: auto;
+
+  border-radius: 15px;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 30px;
+
+  background: #fff;
+
+  box-shadow:
+    0 5px 12px rgba(0,0,0,.2);
+}
+
+.app span {
+  display: block;
+  margin-top: 5px;
+
+  text-shadow:
+    0 1px 4px rgba(0,0,0,.8);
+}
+
+/* =========================
+   APP COLORS
+========================= */
+
+.messages {
+  background: #34c759;
+}
+
+.messenger-icon {
+  background:
+    linear-gradient(
+      135deg,
+      #0099ff,
+      #a033ff
+    );
+
+  color: white;
+}
+
+.phone-icon {
+  background: #34c759;
+}
+
+.photos {
+  background: linear-gradient(
+    135deg,
+    #ff2d55,
+    #ff9500,
+    #34c759,
+    #007aff
+  );
+}
+
+.camera {
+  background: #333;
+}
+
+.settings {
+  background: #8e8e93;
+}
+
+.weather {
+  background: linear-gradient(
+    #2196f3,
+    #62b7ff
+  );
+}
+
+/* =========================
+   DOCK
+========================= */
+
+.dock {
+  position: absolute;
+  z-index: 3;
+
+  left: 15px;
+  right: 15px;
+  bottom: 25px;
+
+  height: 92px;
+
+  border-radius: 30px;
+
+  background: rgba(255,255,255,.2);
+  backdrop-filter: blur(20px);
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  align-items: center;
+  padding: 8px;
+}
+
+.dock .app-icon {
+  width: 62px;
+  height: 62px;
+}
+
+/* =========================
+   MESSENGER APP
+========================= */
+
+.messenger-screen {
+  position: absolute;
+  inset: 0;
+
+  z-index: 30;
+
+  background: #fff;
+  color: #111;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transform: translateX(100%);
+
+  transition:
+    transform .35s ease,
+    opacity .25s ease;
+}
+
+.messenger-screen.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+/* Messenger header */
+
+.messenger-header {
+  height: 94px;
+
+  padding:
+    48px 18px 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: #fff;
+
+  border-bottom: 1px solid #eee;
+}
+
+.messenger-title {
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -1px;
+}
+
+.header-icons {
+  display: flex;
+  gap: 9px;
+}
+
+.header-btn {
+  width: 35px;
+  height: 35px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #f0f0f0;
+
+  font-size: 17px;
+  cursor: pointer;
+}
+
+/* Search */
+
+.messenger-search {
+  margin: 10px 15px;
+
+  height: 39px;
+
+  border-radius: 20px;
+
+  background: #f0f2f5;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 13px;
+
+  color: #777;
+}
+
+.messenger-search span {
+  margin-left: 7px;
+  font-size: 15px;
+}
+
+/* Chat list */
+
+.chat-list {
+  position: absolute;
+  top: 151px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  overflow-y: auto;
+
+  padding: 3px 10px 30px;
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+
+  padding: 11px 7px;
+
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  transition: background .15s;
+}
+
+.chat-item:active {
+  background: #eee;
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 58px;
+  height: 58px;
+
+  border-radius: 50%;
+
+  display: grid;
+  place-items: center;
+
+  color: white;
+
+  font-size: 21px;
+  font-weight: 700;
+
+  overflow: hidden;
+}
+
+.avatar.my {
+  background:
+    linear-gradient(135deg, #ff9a9e, #fad0c4);
+}
+
+.avatar.ca {
+  background:
+    linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.avatar.jack {
+  background:
+    linear-gradient(135deg, #11998e, #38ef7d);
+}
+
+.online-dot {
+  position: absolute;
+
+  right: 1px;
+  bottom: 1px;
+
+  width: 15px;
+  height: 15px;
+
+  border: 3px solid white;
+  border-radius: 50%;
+
+  background: #31c45b;
+}
+
+.chat-info {
+  min-width: 0;
+  flex: 1;
+
+  margin-left: 12px;
+}
+
+.chat-name {
+  font-size: 16px;
+  font-weight: 650;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-preview {
+  margin-top: 4px;
+
+  color: #777;
+
+  font-size: 14px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-time {
+  align-self: flex-start;
+
+  margin-top: 6px;
+
+  font-size: 11px;
+  color: #999;
+}
+
+/* =========================
+   CHAT ROOM
+========================= */
+
+.chat-room {
+  position: absolute;
+  inset: 0;
+
+  background: #fff;
+
+  display: flex;
+  flex-direction: column;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transform: translateX(100%);
+
+  transition:
+    transform .3s ease,
+    opacity .2s ease;
+}
+
+.chat-room.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.chat-room-header {
+  height: 91px;
+
+  padding:
+    43px 13px 7px;
+
+  display: flex;
+  align-items: center;
+
+  border-bottom: 1px solid #eee;
+
+  background: rgba(255,255,255,.97);
+
+  flex-shrink: 0;
+}
+
+.back-btn {
+  border: none;
+  background: transparent;
+
+  font-size: 30px;
+  color: #007aff;
+
+  width: 38px;
+  cursor: pointer;
+}
+
+.room-avatar {
+  width: 39px;
+  height: 39px;
+
+  border-radius: 50%;
+
+  display: grid;
+  place-items: center;
+
+  margin-left: 3px;
+
+  color: white;
+  font-weight: 700;
+}
+
+.room-title {
+  margin-left: 9px;
+}
+
+.room-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.room-status {
+  margin-top: 2px;
+
+  font-size: 11px;
+  color: #31a852;
+}
+
+.room-actions {
+  margin-left: auto;
+
+  display: flex;
+  gap: 4px;
+}
+
+.room-action {
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #f0f2f5;
+
+  cursor: pointer;
+}
+
+/* Messages */
+
+.message-area {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 15px 13px 12px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  background: #fff;
+}
+
+.message {
+  max-width: 76%;
+
+  padding: 9px 13px;
+
+  border-radius: 19px;
+
+  font-size: 15px;
+  line-height: 1.3;
+
+  word-wrap: break-word;
+}
+
+.message.them {
+  align-self: flex-start;
+
+  background: #e4e6eb;
+  color: #111;
+
+  border-bottom-left-radius: 5px;
+}
+
+.message.me {
+  align-self: flex-end;
+
+  background: #0084ff;
+  color: white;
+
+  border-bottom-right-radius: 5px;
+}
+
+.message-time {
+  font-size: 10px;
+  color: #999;
+
+  margin: 3px 9px 5px;
+}
+
+.message-time.me-time {
+  text-align: right;
+}
+
+/* Composer */
+
+.composer {
+  min-height: 66px;
+
+  padding:
+    8px 10px
+    12px;
+
+  border-top: 1px solid #eee;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  background: white;
+}
+
+.plus-btn,
+.emoji-btn {
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #f0f2f5;
+
+  cursor: pointer;
+
+  font-size: 19px;
+}
+
+.message-input {
+  flex: 1;
+
+  min-width: 0;
+
+  height: 39px;
+
+  border: none;
+  outline: none;
+
+  border-radius: 20px;
+
+  background: #f0f2f5;
+
+  padding: 0 14px;
+
+  font-size: 15px;
+}
+
+.send-btn {
+  width: 35px;
+  height: 35px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #0084ff;
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 17px;
+}
+
+/* =========================
+   HOME INDICATOR
+========================= */
+
+.home-indicator {
+  position: absolute;
+
+  bottom: 8px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 135px;
+  height: 5px;
+
+  background: white;
+
+  border-radius: 10px;
+
+  z-index: 200;
+}
+
+.messenger-screen ~ .home-indicator {
+  z-index: 250;
+}
+
+/* =========================
+   SHAKE
+========================= */
+
+.shake {
+  animation: shake .3s;
+}
+
+@keyframes shake {
+  0%,100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-8px);
+  }
+
+  50% {
+    transform: translateX(8px);
+  }
+
+  75% {
+    transform: translateX(-5px);
+  }
+}
+
+/* =========================
+   DESKTOP
+========================= */
+
+@media (min-width: 500px) {
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background:
+      radial-gradient(
+        circle at center,
+        #444,
+        #111 65%
+      );
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="phone">
+
+  <div class="wallpaper"></div>
+
+  <div class="dynamic-island"></div>
+
+  <div class="status-bar">
+    <span id="statusTime">9:41</span>
+
+    <div class="status-icons">
+      <div class="signal"></div>
+      <div class="wifi">◔</div>
+      <div class="battery"></div>
+    </div>
+  </div>
+
+  <!-- =========================
+       LOCK SCREEN
+  ========================== -->
+
+  <section class="lock-screen" id="lockScreen">
+
+    <div class="date" id="date">
+      Thứ Hai, 29 tháng 9
+    </div>
+
+    <div class="clock" id="clock">
+      9:41
+    </div>
+
+    <div class="lock-icon">🔒</div>
+
+    <div class="password-title">
+      Nhập mật mã
+    </div>
+
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <div class="error" id="error">
+      Mật mã không đúng
+    </div>
+
+    <div class="keypad">
+
+      <button class="key" data-key="1">1</button>
+
+      <button class="key" data-key="2">
+        2
+        <small>ABC</small>
+      </button>
+
+      <button class="key" data-key="3">
+        3
+        <small>DEF</small>
+      </button>
+
+      <button class="key" data-key="4">
+        4
+        <small>GHI</small>
+      </button>
+
+      <button class="key" data-key="5">
+        5
+        <small>JKL</small>
+      </button>
+
+      <button class="key" data-key="6">
+        6
+        <small>MNO</small>
+      </button>
+
+      <button class="key" data-key="7">
+        7
+        <small>PQRS</small>
+      </button>
+
+      <button class="key" data-key="8">
+        8
+        <small>TUV</small>
+      </button>
+
+      <button class="key" data-key="9">
+        9
+        <small>WXYZ</small>
+      </button>
+
+      <button class="key"></button>
+
+      <button class="key" data-key="0">0</button>
+
+      <button
+        class="key"
+        id="delete"
+        style="font-size:20px;background:transparent"
+      >
+        ⌫
+      </button>
+
+    </div>
+
+    <div class="lock-actions">
+      <button class="action">🔦</button>
+      <button class="action">📷</button>
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       HOME SCREEN
+  ========================== -->
+
+  <section class="home-screen" id="homeScreen">
+
+    <div class="home-bg"></div>
+
+    <div class="apps">
+
+      <!-- MESSENGER -->
+      <div class="app" id="messengerApp">
+        <div class="app-icon messenger-icon">
+          <span style="font-size:34px;">⚡</span>
+        </div>
+        <span>Messenger</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon phone-icon">☎️</div>
+        <span>Điện thoại</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon photos">🌈</div>
+        <span>Ảnh</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon camera">📷</div>
+        <span>Camera</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon weather">☀️</div>
+        <span>Thời tiết</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon settings">⚙️</div>
+        <span>Cài đặt</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">🗺️</div>
+        <span>Bản đồ</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">🎵</div>
+        <span>Nhạc</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">🌐</div>
+        <span>Safari</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">📝</div>
+        <span>Ghi chú</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">⏰</div>
+        <span>Đồng hồ</span>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">📅</div>
+        <span>Lịch</span>
+      </div>
+
+    </div>
+
+    <!-- DOCK -->
+
+    <div class="dock">
+
+      <div class="app">
+        <div class="app-icon phone-icon">☎️</div>
+      </div>
+
+      <div class="app" id="dockMessenger">
+        <div class="app-icon messenger-icon">
+          <span style="font-size:34px;">⚡</span>
+        </div>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">🌐</div>
+      </div>
+
+      <div class="app">
+        <div class="app-icon">🎵</div>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       MESSENGER
+  ========================== -->
+
+  <section class="messenger-screen" id="messengerScreen">
+
+    <!-- Messenger home -->
+
+    <div id="messengerHome">
+
+      <div class="messenger-header">
+
+        <div class="messenger-title">
+          Messenger
+        </div>
+
+        <div class="header-icons">
+          <button class="header-btn">✎</button>
+          <button class="header-btn">⚙</button>
+        </div>
+
+      </div>
+
+      <div class="messenger-search">
+        🔍
+        <span>Tìm kiếm</span>
+      </div>
+
+      <div class="chat-list">
+
+        <!-- MY -->
+
+        <div
+          class="chat-item"
+          data-chat="my"
+        >
+
+          <div class="avatar-wrap">
+
+            <div class="avatar my">
+              M
+            </div>
+
+            <div class="online-dot"></div>
+
+          </div>
+
+          <div class="chat-info">
+
+            <div class="chat-name">
+              Nguyễn Thanh My
+            </div>
+
+            <div class="chat-preview">
+              miii &lt;3: Hôm nay đi đâu vậy? 👀
+            </div>
+
+          </div>
+
+          <div class="chat-time">
+            09:41
+          </div>
+
+        </div>
+
+
+        <!-- CA -->
+
+        <div
+          class="chat-item"
+          data-chat="ca"
+        >
+
+          <div class="avatar-wrap">
+
+            <div class="avatar ca">
+              C
+            </div>
+
+            <div class="online-dot"></div>
+
+          </div>
+
+          <div class="chat-info">
+
+            <div class="chat-name">
+              Trần Ngọc Cá
+            </div>
+
+            <div class="chat-preview">
+              Cá: Ê tối nay rảnh không?
+            </div>
+
+          </div>
+
+          <div class="chat-time">
+            08:25
+          </div>
+
+        </div>
+
+
+        <!-- JACK -->
+
+        <div
+          class="chat-item"
+          data-chat="jack"
+        >
+
+          <div class="avatar-wrap">
+
+            <div class="avatar jack">
+              J
+            </div>
+
+          </div>
+
+          <div class="chat-info">
+
+            <div class="chat-name">
+              Jack Trần
+            </div>
+
+            <div class="chat-preview">
+              Jack: Ok bro 😂
+            </div>
+
+          </div>
+
+          <div class="chat-time">
+            Hôm qua
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =========================
+         CHAT ROOM
+    ========================== -->
+
+    <div class="chat-room" id="chatRoom">
+
+      <div class="chat-room-header">
+
+        <button
+          class="back-btn"
+          id="backToChats"
+        >
+          ‹
+        </button>
+
+        <div
+          class="room-avatar"
+          id="roomAvatar"
+        >
+          M
+        </div>
+
+        <div class="room-title">
+
+          <div
+            class="room-name"
+            id="roomName"
+          >
+            Nguyễn Thanh My
+          </div>
+
+          <div class="room-status">
+            Đang hoạt động
+          </div>
+
+        </div>
+
+        <div class="room-actions">
+
+          <button class="room-action">
+            📞
+          </button>
+
+          <button class="room-action">
+            🎥
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="message-area"
+        id="messageArea"
+      ></div>
+
+
+      <div class="composer">
+
+        <button class="plus-btn">
+          +
+        </button>
+
+        <input
+          type="text"
+          class="message-input"
+          id="messageInput"
+          placeholder="Aa"
+          autocomplete="off"
+        >
+
+        <button class="emoji-btn">
+          😊
+        </button>
+
+        <button
+          class="send-btn"
+          id="sendButton"
+        >
+          ➤
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <div class="home-indicator"></div>
+
+</div>
+
+
+<script>
+
+/* =========================
+   PASSWORD
+========================= */
+
+const PASSWORD = "0506";
+
+let enteredPassword = "";
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const lockScreen =
+  document.getElementById("lockScreen");
+
+const homeScreen =
+  document.getElementById("homeScreen");
+
+const dots =
+  document.querySelectorAll(".dot");
+
+const error =
+  document.getElementById("error");
+
+const deleteButton =
+  document.getElementById("delete");
+
+const clock =
+  document.getElementById("clock");
+
+const date =
+  document.getElementById("date");
+
+const statusTime =
+  document.getElementById("statusTime");
+
+
+/* =========================
+   CLOCK
+========================= */
+
+function updateTime() {
+
+  const now = new Date();
+
+  const hours =
+    String(now.getHours()).padStart(2, "0");
+
+  const minutes =
+    String(now.getMinutes()).padStart(2, "0");
+
+  clock.textContent =
+    `${hours}:${minutes}`;
+
+  statusTime.textContent =
+    `${hours}:${minutes}`;
+
+  const days = [
+    "Chủ Nhật",
+    "Thứ Hai",
+    "Thứ Ba",
+    "Thứ Tư",
+    "Thứ Năm",
+    "Thứ Sáu",
+    "Thứ Bảy"
+  ];
+
+  const months = [
+    "tháng 1",
+    "tháng 2",
+    "tháng 3",
+    "tháng 4",
+    "tháng 5",
+    "tháng 6",
+    "tháng 7",
+    "tháng 8",
+    "tháng 9",
+    "tháng 10",
+    "tháng 11",
+    "tháng 12"
+  ];
+
+  date.textContent =
+    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+}
+
+updateTime();
+setInterval(updateTime, 1000);
+
+
+/* =========================
+   PASSWORD DOTS
+========================= */
+
+function updateDots() {
+
+  dots.forEach((dot, index) => {
+
+    dot.classList.toggle(
+      "active",
+      index < enteredPassword.length
+    );
+
+  });
+}
+
+
+/* =========================
+   ENTER PASSWORD
+========================= */
+
+function enterNumber(number) {
+
+  if (enteredPassword.length >= 4) {
+    return;
+  }
+
+  enteredPassword += number;
+
+  updateDots();
+
+  error.classList.remove("show");
+
+  if (enteredPassword.length === 4) {
+
+    setTimeout(checkPassword, 150);
+
+  }
+}
+
+
+/* =========================
+   CHECK PASSWORD
+========================= */
+
+function checkPassword() {
+
+  if (enteredPassword === PASSWORD) {
+
+    unlockPhone();
+
+  } else {
+
+    error.classList.add("show");
+
+    lockScreen.classList.add("shake");
+
+    setTimeout(() => {
+
+      lockScreen.classList.remove("shake");
+
+      enteredPassword = "";
+
+      updateDots();
+
+    }, 500);
+
+  }
+}
+
+
+/* =========================
+   UNLOCK
+========================= */
+
+function unlockPhone() {
+
+  lockScreen.classList.add("hidden");
+
+  setTimeout(() => {
+
+    homeScreen.classList.add("active");
+
+  }, 150);
+
+}
+
+
+/* =========================
+   KEYPAD
+========================= */
+
+document
+  .querySelectorAll("[data-key]")
+  .forEach(button => {
+
+    button.addEventListener("click", () => {
+
+      enterNumber(
+        button.dataset.key
+      );
+
+    });
+
+  });
+
+
+/* =========================
+   DELETE
+========================= */
+
+deleteButton.addEventListener("click", () => {
+
+  enteredPassword =
+    enteredPassword.slice(0, -1);
+
+  error.classList.remove("show");
+
+  updateDots();
+
+});
+
+
+/* =========================
+   KEYBOARD
+========================= */
+
+document.addEventListener("keydown", event => {
+
+  if (/^[0-9]$/.test(event.key)) {
+
+    enterNumber(event.key);
+
+  }
+
+  if (event.key === "Backspace") {
+
+    enteredPassword =
+      enteredPassword.slice(0, -1);
+
+    updateDots();
+
+  }
+
+});
+
+
+/* =====================================================
+   MESSENGER
+===================================================== */
+
+const messengerScreen =
+  document.getElementById("messengerScreen");
+
+const messengerApp =
+  document.getElementById("messengerApp");
+
+const dockMessenger =
+  document.getElementById("dockMessenger");
+
+const messengerHome =
+  document.getElementById("messengerHome");
+
+const chatRoom =
+  document.getElementById("chatRoom");
+
+const backToChats =
+  document.getElementById("backToChats");
+
+const roomName =
+  document.getElementById("roomName");
+
+const roomAvatar =
+  document.getElementById("roomAvatar");
+
+const messageArea =
+  document.getElementById("messageArea");
+
+const messageInput =
+  document.getElementById("messageInput");
+
+const sendButton =
+  document.getElementById("sendButton");
+
+
+/* =========================
+   CHAT DATA
+========================= */
+
+const chats = {
+
+    my: {
+    name: "Nguyễn Thanh My",
+    avatar: "M",
+    avatarClass: "my",
+
+    messages: [
+
+        {from:"them",text:"chào buổi sáng anh nha",time:"09:07"},
+        {from:"me",text:"chào bủi sáng em iu",time:"09:09"},
+
+        {from:"them",text:"tối nay em qua căn hộ anh nói chuyện vụ đất đi.",time:"09:12"},
+        {from:"me",text:"ừ, anh cũng muốn chốt luôn cho xong.",time:"09:13"},
+
+        {from:"them",text:"đừng có né nữa nha :))",time:"09:14"},
+        {from:"me",text:"anh có né đâu.",time:"09:14"},
+
+        {from:"them",text:"chiều em qua khoảng 7 giờ nha.",time:"09:15"},
+        {from:"me",text:"ok, cửa anh mở.",time:"09:16"},
+
+        {from:"them",text:"anh ăn uống gì không, em mua qua luôn.",time:"18:51"},
+        {from:"me",text:"gì cũng được ạ.",time:"18:52"},
+        {from:"them",text:"dạ.",time:"18:52"},
+
+        {from:"them",text:"em mua trà sữa với ít đồ ăn nè.",time:"18:58"},
+        {from:"me",text:"dạ, em đi cẩn thận nè.",time:"18:59"},
+
+        {from:"them",text:"em tới dưới sảnh rồi",time:"19:16"},
+        {from:"me",text:"lên đi, cửa không khóa",time:"19:17"},
+
+        {from:"them",text:"em lên nè.",time:"19:18"}
+    ]
+    },
+
+    ca: {
+    name: "Trần Ngọc Cá",
+    avatar: "C",
+    avatarClass: "ca",
+
+    messages: [
+
+        {from:"them",text:"Ê tối nay qua chỗ Cam không?",time:"15:26"},
+        {from:"me",text:"Có chứ.",time:"15:27"},
+
+        {from:"them",text:"Thằng đó còn giữ cái file doanh thu đúng không?",time:"15:28"},
+        {from:"me",text:"Chắc còn.",time:"15:29"},
+
+        {from:"them",text:"Đm nó mà đem cái file đó ra thì tụi mình ăn lồn hết.",time:"15:30"},
+        {from:"me",text:"Bình tĩnh đi.",time:"15:31"},
+
+        {from:"them",text:"Tao bình tĩnh mà.",time:"15:31"},
+        {from:"them",text:"Nhưng tiền tao bỏ vô đó đéo phải ít.",time:"15:32"},
+        {from:"them",text:"Tao chỉ muốn nói chuyện cho ra lẽ thôi.",time:"15:32"},
+
+        {from:"me",text:"Đừng có làm lớn chuyện.",time:"15:34"},
+        {from:"them",text:"Ừ, tao qua lấy cái cần lấy rồi về.",time:"15:35"},
+
+        {from:"them",text:"Xong rồi tao về trước nha.",time:"19:41"},
+        {from:"me",text:"Ừ.",time:"19:42"}
+
+    ]
+    },
+
+    jack: {
+    name: "Jack Trần",
+    avatar: "J",
+    avatarClass: "jack",
+
+    messages: [
+
+        {from:"me",text:"tối ghé nhà t nha",time:"18:02"},
+        {from:"them",text:"Ừ biết rồi",time:"18:03"},
+
+        {from:"them",text:"My qua đó luôn hả?",time:"18:04"},
+        {from:"me",text:"ừa",time:"18:05"},
+
+        {from:"me",text:"mà m hỏi My làm gì? dạo này m với My nói chuyện nhiều ghê ta?",time:"18:06"},
+        {from:"them",text:"Có đ đâu, đừng có xàm lìn",time:"18:07"},
+
+        {from:"me",text:"t thấy log cuộc gọi r, m khỏi cãi",time:"18:07"},
+        {from:"them",text:"Gọi hỏi thăm thôi cha ơi cha",time:"18:08"},
+
+        {from:"them",text:"Bả gọi nhờ tao coi cái tủ đông thôi.",time:"18:08"},
+        {from:"them",text:"Đừng có suy diễn.",time:"18:09"},
+
+        {from:"me",text:"z hả",time:"18:09"},
+        {from:"them",text:"Chứ còn mẹ gì nữa, m cứ nghi ngờ t",time:"18:10"}
+
+    ]
+    },
+
+};
+
+let currentChat = null;
+
+
+/* =========================
+   OPEN MESSENGER
+========================= */
+
+function openMessenger() {
+
+  messengerScreen.classList.add("open");
+
+}
+
+messengerApp.addEventListener(
+  "click",
+  openMessenger
+);
+
+dockMessenger.addEventListener(
+  "click",
+  openMessenger
+);
+
+
+/* =========================
+   OPEN CHAT
+========================= */
+
+document
+  .querySelectorAll(".chat-item")
+  .forEach(item => {
+
+    item.addEventListener("click", () => {
+
+      const chatId =
+        item.dataset.chat;
+
+      openChat(chatId);
+
+    });
+
+  });
+
+
+/* =========================
+   OPEN CHAT FUNCTION
+========================= */
+
+function openChat(chatId) {
+
+  currentChat = chatId;
+
+  const chat =
+    chats[chatId];
+
+  roomName.textContent =
+    chat.name;
+
+  roomAvatar.textContent =
+    chat.avatar;
+
+  roomAvatar.className =
+    "room-avatar " + chat.avatarClass;
+
+  messageArea.innerHTML = "";
+
+  chat.messages.forEach(message => {
+
+    addMessageToScreen(
+      message.from,
+      message.text,
+      message.time
+    );
+
+  });
+
+  messengerHome.style.display =
+    "none";
+
+  chatRoom.classList.add("open");
+
+  setTimeout(() => {
+
+    messageArea.scrollTop =
+      messageArea.scrollHeight;
+
+    messageInput.focus();
+
+  }, 100);
+
+}
+
+
+/* =========================
+   ADD MESSAGE
+========================= */
+
+function addMessageToScreen(
+  from,
+  text,
+  time
+) {
+
+  const bubble =
+    document.createElement("div");
+
+  bubble.className =
+    "message " + from;
+
+  bubble.textContent =
+    text;
+
+  messageArea.appendChild(
+    bubble
+  );
+
+  if (time) {
+
+    const timeElement =
+      document.createElement("div");
+
+    timeElement.className =
+      "message-time " +
+      (from === "me"
+        ? "me-time"
+        : "");
+
+    timeElement.textContent =
+      time;
+
+    messageArea.appendChild(
+      timeElement
+    );
+
+  }
+
+}
+
+
+/* =========================
+   BACK TO CHAT LIST
+========================= */
+
+backToChats.addEventListener(
+  "click",
+  () => {
+
+    chatRoom.classList.remove(
+      "open"
+    );
+
+    setTimeout(() => {
+
+      messengerHome.style.display =
+        "block";
+
+    }, 300);
+
+  }
+);
+
+
+/* =========================
+   SEND MESSAGE
+========================= */
+
+function sendMessage() {
+
+  const text =
+    messageInput.value.trim();
+
+  if (!text) {
+    return;
+  }
+
+  const now =
+    new Date();
+
+  const time =
+    now.getHours()
+      .toString()
+      .padStart(2, "0")
+    + ":" +
+    now.getMinutes()
+      .toString()
+      .padStart(2, "0");
+
+  addMessageToScreen(
+    "me",
+    text,
+    time
+  );
+
+  chats[currentChat].messages.push({
+    from: "me",
+    text: text,
+    time: time
+  });
+
+  messageInput.value = "";
+
+  messageArea.scrollTop =
+    messageArea.scrollHeight;
+
+}
+
+sendButton.addEventListener(
+  "click",
+  sendMessage
+);
+
+
+/* =========================
+   ENTER TO SEND
+========================= */
+
+messageInput.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key === "Enter"
+      && !event.shiftKey
+    ) {
+
+      event.preventDefault();
+
+      sendMessage();
+
+    }
+
+  }
+);
+
+
+/* =========================
+   EMOJI BUTTON
+========================= */
+
+document
+  .querySelector(".emoji-btn")
+  .addEventListener("click", () => {
+
+    messageInput.value += " 😊";
+
+    messageInput.focus();
+
+  });
+
+
+/* =========================
+   HOME INDICATOR
+========================= */
+
+document
+  .querySelector(".home-indicator")
+  .addEventListener("click", () => {
+
+    if (
+      messengerScreen.classList.contains("open")
+    ) {
+
+      chatRoom.classList.remove("open");
+
+      messengerScreen.classList.remove("open");
+
+      setTimeout(() => {
+
+        messengerHome.style.display =
+          "block";
+
+      }, 300);
+
+    }
+
+  });
+
+</script>
+
+</body>
+</html>
